@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=77.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,13 +8,15 @@ version = "0.0.0.dev0"
 description = "RF electronics helper package."
 readme = "README.md"
 requires-python = ">=3.10"
-authors = [{name="Grant Giesbrecht", email="giesbrechtgrant@gmail.com"}]
+authors = [{ name = "Grant Giesbrecht", email = "giesbrechtgrant@gmail.com" }]
 dependencies = ["scikit-rf>=0.31.0"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Topic :: Scientific/Engineering"
 ]
 license = "BSD-2-Clause"
+
+[tool.setuptools]
 license-files = ["LICENSE"]
 
 [project.urls]
