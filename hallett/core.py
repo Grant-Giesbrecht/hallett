@@ -1,20 +1,35 @@
 import numpy as np
-import os
-from stardust.io import hdf_to_dict
-import csv
-import re
 
-
-def lin_to_dB(x_lin:float, use10:bool=False):
+def lin_to_dB(x_lin:float, use10:bool=False) -> float:
+	''' Converts a linear parameter to decibels. Will raise a warning if
+	negative numbers are provided.
+	
+	Args:
+		x_lin (float): Linear value to convert to decibels
+		use10 (bool): Use 10*log(X) definition instead of 20*log(X) definition. Default is false.
+	
+	Returns:
+		(float): Value converted to dB
+	'''
+	
 	if use10:
 		return 10*np.log10(x_lin)
 	else:
 		return 20*np.log10(x_lin)
 
-def has_ext(path, exts):
-	return os.path.splitext(path)[1].lower() in [e.lower() for e in exts]
-
-def bounded_interp(x, y, x_target):
-	if x_target < x[0] or x_target > x[-1]:
-		return None
-	return np.interp(x_target, x, y) 
+def dB_to_lin(x_dB:float, use10:bool=False) -> float:
+	''' Converts a linear parameter to decibels. Will raise a warning if
+	negative numbers are provided.
+	
+	Args:
+		x_dB (float): Value in dB to convert to linear units.
+		use10 (bool): Use 10*log(X) definition instead of 20*log(X) definition. Default is false.
+	
+	Returns:
+		(float): Value converted to dB
+	'''
+	
+	if use10:
+		return np.log10(10, x_dB/10)
+	else:
+		return np.power(10, x_dB/20)

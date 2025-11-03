@@ -1,7 +1,8 @@
 import numpy as np
 import os
 from stardust.io import hdf_to_dict
-from hallett.core import lin_to_dB, has_ext, bounded_interp
+from stardust.algorithm import has_ext, bounded_interp
+from hallett.core import lin_to_dB
 import csv
 import re
 import skrf as rf
