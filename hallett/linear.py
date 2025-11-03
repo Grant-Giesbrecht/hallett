@@ -84,8 +84,6 @@ def format_sparam(data:list, format):
 	else:
 		ValueError(f"Unrecognized format type {format}.")
 
-import skrf as rf
-
 def load_touchstone(path):
 	"""
 	Load an .sNp Touchstone file using scikit-rf.

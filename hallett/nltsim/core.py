@@ -2,18 +2,17 @@ from dataclasses import dataclass
 import numpy as np
 from typing import Callable, List, Literal, Tuple, Optional
 
-# TODO: Explain
 def _newton_i_update(i0: np.ndarray, s: np.ndarray, L0: np.ndarray, alpha: np.ndarray, max_iter: int = 15, tol: float = 1e-12) -> np.ndarray:
 	"""Solve per-element for i:  F(i) = i - i0 - s / (L0 * (1 + alpha*i^2)) = 0.
 
-	Parameters
-	----------
-	i0 : array
-		Previous current (same shape as s).
-	s : array
-		s = dt * Δv  (ladder)   OR   s = - dt * (∂v/∂x) (FDTD)
-	L0, alpha : arrays
-		Base inductance and nonlinearity per element (section or half-cell).
+	Args:
+		i0 (array): Previous current (same shape as s).
+		s (array): s = dt * Δv  (ladder)   OR   s = - dt * (∂v/∂x) (FDTD)
+		L0 (array): Base inductance and nonlinearity per element (section or half-cell).
+		alpha (array): Base inductance and nonlinearity per element (section or half-cell).
+	
+	Returns:
+		Returns updated estimates for current.
 	"""
 	# Initial guess: explicit update
 	i = i0 + s / (L0 * (1.0 + alpha * i0**2))
@@ -32,14 +31,15 @@ def _newton_i_update(i0: np.ndarray, s: np.ndarray, L0: np.ndarray, alpha: np.nd
 		i = i_new
 	return i
 
-#NOTE: Previously LadderResult
 @dataclass
 class LumpedElementResult:
+	''' Class containing the result data from LumpedElementSim object.
+	'''
+	
 	t: np.ndarray
 	v_nodes: np.ndarray    # (Nt, N+1)
 	i_L: np.ndarray        # (Nt, N)
 	
-	#NOTE: Was probe_ladder_voltage()
 	def probe_voltage(self, node: int) -> Tuple[np.ndarray, np.ndarray]:
 		''' Gets the waveform at the specified node.
 		
@@ -55,15 +55,16 @@ class LumpedElementResult:
 		v_t = np.asarray(self.v_nodes)[:, node]
 		return t, v_t
 
-#NOTE: Previously FDTDResult
 @dataclass
 class FiniteDiffResult:
+	''' Class containing the result data from a FiniteDiffSim object.
+	'''
+	
 	t: np.ndarray
 	x: np.ndarray
 	v_xt: np.ndarray   # (Nt, Nx+1)
 	i_xt: np.ndarray   # (Nt, Nx)
 	
-	# Note: Was probe_fdtd_voltage()
 	def probe_voltage(self, x: Optional[float] = None, index: Optional[int] = None) -> Tuple[np.ndarray, np.ndarray]:
 		''' Returns the waveform at the specified x position or index.
 		
@@ -85,40 +86,46 @@ class FiniteDiffResult:
 		v_t = np.asarray(self.v_xt)[:, idx]
 		return t, v_t
 
-#NOTE: Was FDTDRegion
 @dataclass
 class TLINRegion:
-	x0: float
-	x1: float
-	L0_per_m: float
-	C_per_m: float
-	alpha: float
+	''' Class used to describe a region of the simulation transmisison line.
+	'''
+	
+	x0: float # start position (m)
+	x1: float # End position (m)
+	L0_per_m: float # Inductance per meter (H/m)
+	C_per_m: float # Capacitance per meter (F/m)
+	alpha: float # Nonlinearity (#TODO: Units)
 
-#NOTE: Previously LumpedElementParamsPW
 @dataclass
 class LumpedElementParams:
-	N: int
-	L: float
-	Rs: float
-	RL: float
-	dt: float
-	T: float
-	Vs_func: Callable[[float], float]
-	regions: List[TLINRegion]
-	nonlinear_update: Literal["explicit","implicit"] = "explicit"
+	''' Class to describe basic parameters for a LumpedElementSim object.
+	'''
+	
+	N: int # Number of ladder stages
+	L: float # Total length (m)
+	Rs: float # Source impedance (Ohms) (x=0)
+	RL: float # Load impedance (Ohms)
+	dt: float # Time step
+	T: float # End time
+	Vs_func: Callable[[float], float] # Source stimulus function ( V(t) )
+	regions: List[TLINRegion] # List of TLINRegion objects describing transmission line
+	nonlinear_update: Literal["explicit","implicit"] = "explicit" # Update method
 
-#NOTE: Previously FiniteDiffParamsPW
 @dataclass
 class FiniteDiffParams:
-	Nx: int
-	L: float
-	dt: float
-	T: float
-	Rs: float
-	RL: float
-	Vs_func: Callable[[float], float]
-	regions: List[TLINRegion]
-	nonlinear_update: Literal["explicit","implicit"] = "explicit"
+	''' Class used to describe basic parameters for a FiniteDiffSim object.
+	'''
+	
+	Nx: int # Number of discrete steps
+	L: float # Total length (m)
+	dt: float # Time step (s)
+	T: float # End time (s)
+	Rs: float # Source impedance (Ohms) (x=0)
+	RL: float # Load impedance (Ohms) 
+	Vs_func: Callable[[float], float] # Source stimulus function ( V(t) )
+	regions: List[TLINRegion] # List of TLINRegion objects describing transmission line
+	nonlinear_update: Literal["explicit","implicit"] = "explicit" # Update method
 
 def _sample_regions_on_grid(regions: List, grid: np.ndarray, field: str) -> np.ndarray:
 	vals = np.zeros_like(grid, dtype=float)
@@ -193,6 +200,7 @@ class LumpedElementSim:
 
 #NOTE: Previously NLTFDTD_PW
 class FiniteDiffSim:
+	
 	def __init__(self, p: FiniteDiffParams):
 		self.p = p
 		self.dx = p.L / p.Nx
