@@ -1,7 +1,10 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import numpy as np
 from typing import Literal, Tuple, Optional
 import matplotlib.pyplot as plt
+
+from hallett.nltsim.core import FiniteDiffResult
+from hallett.core import W_to_dBm
 
 def analytic_signal(x: np.ndarray) -> np.ndarray:
 	''' Creates an analytic signal from a real-valued signal: runs an FFT, removes all negative
@@ -210,9 +213,6 @@ def plot_signal_diagnostics(t, v, dt, center_freq_hz=None, smooth_points=0, fmax
 	plt.tight_layout()
 	return fig, axes
 
-def w2dbm(Pw):
-	return 10*np.log10(Pw/1e-3) if Pw > 0 else -np.inf
-
 def tone_power_from_psd(freqs: np.ndarray, psd: np.ndarray, f_target: float, bw_bins: int, RL: float = 50.0) -> float:
 	"""
 	Estimate power at f_target (fundamental/harmonics) by integrating PSD over +/- bw_bins bins.
@@ -251,3 +251,86 @@ def tone_power_from_psd(freqs: np.ndarray, psd: np.ndarray, f_target: float, bw_
 	
 	# Return power in region of spectrum
 	return P
+
+@dataclass
+class HarmonicPowers:
+	x_parameter: str = field(default_factory=lambda: "")
+	x_values: list = field(default_factory=list)
+	f0: list = field(default_factory=list)
+	h2: list = field(default_factory=list)
+	h3: list = field(default_factory=list)
+	h4: list = field(default_factory=list)
+	h5: list = field(default_factory=list)
+	h6: list = field(default_factory=list)
+	h7: list = field(default_factory=list)
+	h8: list = field(default_factory=list)
+	
+	def append_harmonic(self, harm_idx:int, value:float):
+		''' Appends the specified value to the specified harmonic list.
+		'''
+		
+		if harm_idx == 1:
+			self.f0.append(value)
+		elif harm_idx == 2:
+			self.h2.append(value)
+		elif harm_idx == 3:
+			self.h3.append(value)
+		elif harm_idx == 4:
+			self.h4.append(value)
+		elif harm_idx == 5:
+			self.h5.append(value)
+		elif harm_idx == 6:
+			self.h6.append(value)
+		elif harm_idx == 7:
+			self.h7.append(value)
+		elif harm_idx == 8:
+			self.h8.append(value)
+	
+def load_harmonics_probe(result_obj, hp_obj, f0:float, tail:float, bin_bw_Hz:float, num_harmonics:int=3, RL:float=50):
+	'''
+	Calculates the power at a specified number of harmonics at the system load
+	from a result object.
+	
+	Args:
+		result_obj: Simulation result object to use.
+		hp_obj (): 
+		tail (float): Length in seconds of time series, starting at the end, to 
+			analyze. This allows you to skip the beginning of the sequence when
+			the system might not be in steady state.
+	'''
+	
+	# Get v and t from reulst object
+	if isinstance(result_obj, FiniteDiffResult):
+		v_t = result_obj.v_xt[:, -1]
+	else:
+		v_t = result_obj.v_nodes[:, -1]
+	t = result_obj.t
+
+	# Tail for steady-state
+	if tail is not None and tail > 0:
+		t0 = max(0.0, t[-1] - tail)
+		mask = t >= t0
+		
+		# Trim time and voltage to specified tail
+		t = t[mask]
+		v_t = v_t[mask]
+	
+	dt = t[1] - t[0]
+	spec = spectrum_probe(v_t, dt, window="hann", scaling="psd")
+	f = spec.freqs_hz
+	psd = spec.spec
+	
+	output_elements = []
+	for i in range(1, num_harmonics+1):
+		harm_power = tone_power_from_psd(f, psd, i*f0, bin_bw_Hz, RL=RL)
+		harm_power_dBm = W_to_dBm(harm_power)
+		
+		# Build up output list
+		output_elements.append(harm_power_dBm)
+		
+		# Add to HP object if present
+		if hp_obj is not None:
+			hp_obj.append_harmonic(i, harm_power_dBm)	
+	
+	# print(f"Vdc={vb:.3f} m  ->  P1={P1_dBm:.2f} dBm,  P2={P2_dBm:.2f} dBm,  P3={P3_dBm:.2f} dBm")
+	return output_elements

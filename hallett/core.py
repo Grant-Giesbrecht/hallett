@@ -33,3 +33,6 @@ def dB_to_lin(x_dB:float, use10:bool=False) -> float:
 		return np.log10(10, x_dB/10)
 	else:
 		return np.power(10, x_dB/20)
+
+def W_to_dBm(Pw):
+	return 10*np.log10(Pw/1e-3) if Pw > 0 else -np.inf
