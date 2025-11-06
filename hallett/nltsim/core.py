@@ -95,6 +95,7 @@ class TLINRegion:
 	x1: float # End position (m)
 	L0_per_m: float # Inductance per meter (H/m)
 	C_per_m: float # Capacitance per meter (F/m)
+	G_per_m: float # Conductance per meter (S/m)
 	alpha: float # Nonlinearity (Model: L = L0*[1 + alpha*I**2] )
 
 @dataclass
@@ -171,6 +172,7 @@ class LumpedElementSim:
 		x_nodes = np.arange(sim_params.N + 1) * self.dx
 		self.L0_sec = _sample_regions_on_grid(sim_params.regions, x_sec, 'L0_per_m') * self.dx
 		self.C_nodes = _sample_regions_on_grid(sim_params.regions, x_nodes, 'C_per_m') * self.dx
+		self.G_nodes = _sample_regions_on_grid(sim_params.regions, x_nodes, 'G_per_m') * self.dx
 		self.alpha_sec = _sample_regions_on_grid(sim_params.regions, x_sec, 'alpha')
 
 	def run(self) -> LumpedElementResult:
@@ -238,7 +240,8 @@ class LumpedElementSim:
 			dvdt[-1] = (iL_half[-1] - i_load) / self.C_nodes[-1]
 			
 			# Update voltage from dvdt and dt
-			v = v + dt * dvdt
+			# v = v + dt * dvdt # Lossless model before G was added
+			v = (v + dt * dvdt) / (1.0 + dt * self.G_nodes / self.C_nodes)
 			
 			# Add voltages and current to history parameters
 			v_hist[n, :] = v
@@ -260,6 +263,7 @@ class FiniteDiffSim:
 		x_half  = (np.arange(sim_params.Nx) + 0.5) * self.dx
 		self.C_nodes = _sample_regions_on_grid(sim_params.regions, x_nodes, 'C_per_m') # C at nodes on fullsteps
 		self.L0_half = _sample_regions_on_grid(sim_params.regions, x_half,  'L0_per_m') # L at nodes, offset by a halfstep
+		self.G_nodes = _sample_regions_on_grid(sim_params.regions, x_nodes,  'G_per_m') # G at nodes on fullstep
 		self.alpha_half = _sample_regions_on_grid(sim_params.regions, x_half, 'alpha') # Nonlinearity at nodes, offset by a halfset
 
 	@staticmethod
@@ -332,8 +336,10 @@ class FiniteDiffSim:
 			# Estimate last di_dx
 			di_dx[-1] = (i_right - i_half[-1]) / dx
 			
-			# Update voltage from di_dx and C
-			v = v - dt * (di_dx / self.C_nodes)
+			# Update voltage from di_dx and C. Incorporate loss from G
+			# v = v - dt * (di_dx / self.C_nodes) # Lossless model
+			v = (v - dt * di_dx / self.C_nodes) / (1.0 + dt * self.G_nodes / self.C_nodes)
+
 			
 			# Overwrite first voltage if source impedeance is zero
 			if sim_params.Rs == 0:
