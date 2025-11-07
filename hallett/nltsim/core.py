@@ -36,15 +36,19 @@ def _newton_i_update(i0: np.ndarray, s: np.ndarray, L0: np.ndarray, alpha: np.nd
 
 class SimulationResult(Serializable):
 	
-	__state_fields__ = ("log")
+	__state_fields__ = ("log", "derived_results")
 	
 	def __init__(self, log:plf.LogPile=None):
 		super().__init__()
 		
+		# Create a log
 		if log is None:
 			self.log = plf.LogPile
 		else:
 			self.log = log
+		
+		# List of additional result objects that are derived from primary data
+		self.derived_results = []
 
 
 class LumpedElementResult(SimulationResult):

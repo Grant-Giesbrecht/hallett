@@ -253,7 +253,7 @@ def tone_power_from_psd(freqs: np.ndarray, psd: np.ndarray, f_target: float, bw_
 	return P
 
 @dataclass
-class HarmonicPowers:
+class HarmonicPowerResult:
 	x_parameter: str = field(default_factory=lambda: "")
 	x_values: list = field(default_factory=list)
 	f0: list = field(default_factory=list)
@@ -286,18 +286,20 @@ class HarmonicPowers:
 		elif harm_idx == 8:
 			self.h8.append(value)
 	
-def load_harmonics_probe(result_obj, hp_obj, f0:float, tail:float, bin_bw_Hz:float, num_harmonics:int=3, RL:float=50):
+def load_harmonics_probe(result_obj, f0:float, tail:float, bin_bw_Hz:float, num_harmonics:int=3, RL:float=50, x_parameter:str="", x_values:list=[]):
 	'''
 	Calculates the power at a specified number of harmonics at the system load
 	from a result object.
 	
 	Args:
 		result_obj: Simulation result object to use.
-		hp_obj (): 
 		tail (float): Length in seconds of time series, starting at the end, to 
 			analyze. This allows you to skip the beginning of the sequence when
 			the system might not be in steady state.
 	'''
+	
+	# Create 
+	hp_obj = HarmonicPowerResult(x_parameter=x_parameter, x_values=x_values)
 	
 	# Get v and t from reulst object
 	if isinstance(result_obj, FiniteDiffResult):
@@ -331,6 +333,8 @@ def load_harmonics_probe(result_obj, hp_obj, f0:float, tail:float, bin_bw_Hz:flo
 		# Add to HP object if present
 		if hp_obj is not None:
 			hp_obj.append_harmonic(i, harm_power_dBm)	
+	
+	
 	
 	# print(f"Vdc={vb:.3f} m  ->  P1={P1_dBm:.2f} dBm,  P2={P2_dBm:.2f} dBm,  P3={P3_dBm:.2f} dBm")
 	return output_elements
