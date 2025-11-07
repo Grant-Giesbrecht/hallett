@@ -34,5 +34,17 @@ def dB_to_lin(x_dB:float, use10:bool=False) -> float:
 	else:
 		return np.power(10, x_dB/20)
 
+def dB_to_Np(dB:float):
+	''' Convert decibels to Nepers
+	'''
+	
+	return dB/20*np.log(10)
+
+def Np_to_dB(Np:float):
+	''' Convert Nepers to decibels
+	'''
+	
+	return Np/np.log(10)*20
+
 def W_to_dBm(Pw):
 	return 10*np.log10(Pw/1e-3) if Pw > 0 else -np.inf
