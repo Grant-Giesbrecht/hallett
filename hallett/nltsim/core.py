@@ -1,6 +1,9 @@
 from dataclasses import dataclass
 import numpy as np
 from typing import Callable, List, Literal, Tuple, Optional
+from stardust.serializer import Serializable
+
+import pylogfile as plf
 
 def _newton_i_update(i0: np.ndarray, s: np.ndarray, L0: np.ndarray, alpha: np.ndarray, max_iter: int = 15, tol: float = 1e-12) -> np.ndarray:
 	"""Solve per-element for i:  F(i) = i - i0 - s / (L0 * (1 + alpha*i^2)) = 0.
@@ -31,14 +34,31 @@ def _newton_i_update(i0: np.ndarray, s: np.ndarray, L0: np.ndarray, alpha: np.nd
 		i = i_new
 	return i
 
-@dataclass
-class LumpedElementResult:
+class SimulationResult(Serializable):
+	
+	__state_fields__ = ("log")
+	
+	def __init__(self, log:plf.LogPile=None):
+		super().__init__()
+		
+		if log is None:
+			self.log = plf.LogPile
+		else:
+			self.log = log
+
+
+class LumpedElementResult(SimulationResult):
 	''' Class containing the result data from LumpedElementSim object.
 	'''
 	
-	t: np.ndarray
-	v_nodes: np.ndarray    # (Nt, N+1)
-	i_L: np.ndarray        # (Nt, N)
+	__state_fields__ = ("t", "v_nodes", "i_L")
+	
+	def __init__(self, t:np.ndarray, v_nodes:np.ndarray, i_L:np.ndarray, log:plf.LogPile=None):
+		super().__init__(log=log)
+		
+		self.t = t # Time point
+		self.v_nodes = v_nodes    # (Nt, N+1), voltage at each node
+		self.i_L: np.ndarray        # (Nt, N), Current through inductor
 	
 	def probe_voltage(self, node: int) -> Tuple[np.ndarray, np.ndarray]:
 		''' Gets the waveform at the specified node.
@@ -55,15 +75,19 @@ class LumpedElementResult:
 		v_t = np.asarray(self.v_nodes)[:, node]
 		return t, v_t
 
-@dataclass
-class FiniteDiffResult:
+class FiniteDiffResult(SimulationResult):
 	''' Class containing the result data from a FiniteDiffSim object.
 	'''
 	
-	t: np.ndarray
-	x: np.ndarray
-	v_xt: np.ndarray   # (Nt, Nx+1)
-	i_xt: np.ndarray   # (Nt, Nx)
+	__state_fields__ = ("t", "x", "v_xt", "i_xt")
+	
+	def __init__(self, t:np.ndarray, x:np.ndarray, v_xt:np.ndarray, i_xt:np.ndarray, log:plf.LogPile=None):
+		super().__init__(log=log)
+		
+		self.t = t
+		self.x = x
+		self.v_xt = v_xt   # (Nt, Nx+1)
+		self.i_xt = i_xt   # (Nt, Nx)
 	
 	def probe_voltage(self, x: Optional[float] = None, index: Optional[int] = None) -> Tuple[np.ndarray, np.ndarray]:
 		''' Returns the waveform at the specified x position or index.
@@ -165,7 +189,11 @@ class LumpedElementSim:
 	''' Simulator for L-C ladder based non-linear transmission line. '''
 	
 	def __init__(self, sim_params: LumpedElementParams):
+		
+		self.sim_results = None
+		
 		self.sim_params = sim_params
+		
 		self.Nt = int(np.round(sim_params.t_end / sim_params.dt)) + 1
 		self.dx = sim_params.total_length / sim_params.N
 		x_sec = (np.arange(sim_params.N) + 0.5) * self.dx
@@ -251,12 +279,17 @@ class LumpedElementSim:
 		t = np.arange(Nt) * dt
 		
 		# Create data result object and return
-		return LumpedElementResult(t=t, v_nodes=v_hist, i_L=i_hist)
+		self.sim_results = LumpedElementResult(t=t, v_nodes=v_hist, i_L=i_hist)
+		return self.sim_results
 
 class FiniteDiffSim:
 	
 	def __init__(self, sim_params: FiniteDiffParams):
+		
+		self.sim_results = None
+		
 		self.sim_params = sim_params
+		
 		self.dx = sim_params.total_length / sim_params.Nx
 		self.Nt = int(np.round(sim_params.t_end / sim_params.dt)) + 1
 		x_nodes = np.linspace(0.0, sim_params.total_length, sim_params.Nx + 1)
@@ -265,7 +298,7 @@ class FiniteDiffSim:
 		self.L0_half = _sample_regions_on_grid(sim_params.regions, x_half,  'L0_per_m') # L at nodes, offset by a halfstep
 		self.G_nodes = _sample_regions_on_grid(sim_params.regions, x_nodes,  'G_per_m') # G at nodes on fullstep
 		self.alpha_half = _sample_regions_on_grid(sim_params.regions, x_half, 'alpha') # Nonlinearity at nodes, offset by a halfset
-
+		
 	@staticmethod
 	def cfl_dt(dx: float, Lmin: float, Cmin: float, safety: float = 0.9) -> float:
 		''' Implements CFL condition to return a reasonable timestep to use, including
@@ -354,6 +387,8 @@ class FiniteDiffSim:
 		x = np.linspace(0.0, sim_params.total_length, Nx+1)
 		
 		# Create result object and return
-		return FiniteDiffResult(t=t, x=x, v_xt=v_hist, i_xt=i_hist)
+		self.sim_results = FiniteDiffResult(t=t, x=x, v_xt=v_hist, i_xt=i_hist)
+		
+		return self.sim_results
 
 
