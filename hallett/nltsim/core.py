@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 import numpy as np
 from typing import Callable, List, Literal, Tuple, Optional
-from stardust.serializer import Serializable
+from stardust.serializer import *
 
-import pylogfile as plf
+import pylogfile.base as plf
 
 def _newton_i_update(i0: np.ndarray, s: np.ndarray, L0: np.ndarray, alpha: np.ndarray, max_iter: int = 15, tol: float = 1e-12) -> np.ndarray:
 	"""Solve per-element for i:  F(i) = i - i0 - s / (L0 * (1 + alpha*i^2)) = 0.
