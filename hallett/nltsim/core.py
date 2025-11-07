@@ -110,47 +110,58 @@ class FiniteDiffResult(SimulationResult):
 		v_t = np.asarray(self.v_xt)[:, idx]
 		return t, v_t
 
-@dataclass
-class TLINRegion:
+
+class TLINRegion(Serializable):
 	''' Class used to describe a region of the simulation transmisison line.
 	'''
 	
-	x0: float # start position (m)
-	x1: float # End position (m)
-	L0_per_m: float # Inductance per meter (H/m)
-	C_per_m: float # Capacitance per meter (F/m)
-	G_per_m: float # Conductance per meter (S/m)
-	alpha: float # Nonlinearity (Model: L = L0*[1 + alpha*I**2] )
+	__state_fields__ = ("x0", "x1", "L0_per_m", "C_per_m", "G_per_m", "alpha")
+	
+	def __init__(self, x0:float, x1:float, L0_per_m:float, C_per_m:float, G_per_m:float, alpha:float):
+		super().__init__()
+		
+		self.x0 = x0 # start position (m)
+		self.x1 = x1 # End position (m)
+		self.L0_per_m = L0_per_m # Inductance per meter (H/m)
+		self.C_per_m = C_per_m # Capacitance per meter (F/m)
+		self.G_per_m = G_per_m # Conductance per meter (S/m)
+		self.alpha = alpha # Nonlinearity (Model: L = L0*[1 + alpha*I**2] )
 
-@dataclass
-class LumpedElementParams:
+class LumpedElementParams(Serializable):
 	''' Class to describe basic parameters for a LumpedElementSim object.
 	'''
 	
-	N: int # Number of ladder stages
-	total_length: float # Total length (m)
-	Rs: float # Source impedance (Ohms) (x=0)
-	RL: float # Load impedance (Ohms)
-	dt: float # Time step
-	t_end: float # End time
-	Vs_func: Callable[[float], float] # Source stimulus function ( V(t) )
-	regions: List[TLINRegion] # List of TLINRegion objects describing transmission line
-	nonlinear_update: Literal["explicit","implicit"] = "explicit" # Update method
+	__state_fields__ = ("N", "total_length", "Rs", "RL", "dt", "t_end", "Vs_func", "regions", "nonlinear_update")
+	
+	def __init__(self, N:int, total_length:float, Rs:float, RL:float, dt:float, t_end:float, Vs_func:Callable[[float], float], regions:List[TLINRegion], nonlinear_update:Literal["explicit", "implicit"]="explicit"):
+		super().__init__()
+		
+		self.N = N # Number of ladder stages
+		self.total_length = total_length # Total length (m)
+		self.Rs = Rs # Source impedance (Ohms) (x=0)
+		self.RL = RL # Load impedance (Ohms)
+		self.dt = dt # Time step
+		self.t_end = t_end # End time
+		self.Vs_func = Vs_func # Source stimulus function ( V(t) )
+		self.regions = regions # List of TLINRegion objects describing transmission line
+		self.nonlinear_update = nonlinear_update # Update method
 
-@dataclass
-class FiniteDiffParams:
+class FiniteDiffParams(Serializable):
 	''' Class used to describe basic parameters for a FiniteDiffSim object.
 	'''
 	
-	Nx: int # Number of discrete steps
-	total_length: float # Total length (m)
-	dt: float # Time step (s)
-	t_end: float # End time (s)
-	Rs: float # Source impedance (Ohms) (x=0)
-	RL: float # Load impedance (Ohms) 
-	Vs_func: Callable[[float], float] # Source stimulus function ( V(t) )
-	regions: List[TLINRegion] # List of TLINRegion objects describing transmission line
-	nonlinear_update: Literal["explicit","implicit"] = "explicit" # Update method
+	def __init__(self, Nx:int, total_length:float, dt:float, t_end:float, Rs:float, RL:float, Vs_func:Callable[[float], float], regions:List[TLINRegion], nonlinear_update:Literal["explicit", "implicit"]="explicit"):
+		super().__init__()
+		
+		self.Nx = Nx # Number of discrete steps
+		self.total_length = total_length # Total length (m)
+		self.dt = dt # Time step (s)
+		self.t_end = t_end #End time (s)
+		self.Rs = Rs # Source impedance (Ohms) (x=0)
+		self.RL = RL # Load impedance (Ohms) 
+		self.Vs_func = Vs_func # Source stimulus function ( V(t) )
+		self.regions = regions # List of TLINRegion objects describing transmission line
+		self.nonlinear_update = nonlinear_update # Update method
 
 def _sample_regions_on_grid(regions: List, grid: np.ndarray, field: str) -> np.ndarray:
 	''' Returns the selected parameter `field` sampled over the positions defined
