@@ -150,6 +150,8 @@ class FiniteDiffParams(Serializable):
 	''' Class used to describe basic parameters for a FiniteDiffSim object.
 	'''
 	
+	__state_fields__ = ("Nx", "total_length", "dt", "t_end", "Rs", "RL", "Vs_func", "regions", "nonlinear_update")
+	
 	def __init__(self, Nx:int, total_length:float, dt:float, t_end:float, Rs:float, RL:float, Vs_func:Callable[[float], float], regions:List[TLINRegion], nonlinear_update:Literal["explicit", "implicit"]="explicit"):
 		super().__init__()
 		
@@ -196,12 +198,35 @@ def _sample_regions_on_grid(regions: List, grid: np.ndarray, field: str) -> np.n
 				vals[-1] = getattr(r, field)
 	return vals
 
-class LumpedElementSim:
-	''' Simulator for L-C ladder based non-linear transmission line. '''
+class NLTSimulator(Serializable):
+	''' Parent class for all simulators '''
 	
-	def __init__(self, sim_params: LumpedElementParams):
+	__state_fields__ = ("log", "sim_results", "sim_params", "simulation_name", "simulation_notes")
+	
+	def __init__(self, log:plf.LogPile=None):
+		super().__init__()
+		
+		if log is None:
+			self.log = plf.LogPile()
+		else:
+			self.log = log
 		
 		self.sim_results = None
+		self.sim_params = None
+		
+		self.simulation_name = ""
+		self.simulation_notes = ""
+	
+	def run(self):
+		pass
+
+class LumpedElementSim(NLTSimulator):
+	''' Simulator for L-C ladder based non-linear transmission line. '''
+	
+	__state_fields__ = ("Nt", "dx", "L0_sec", "C_nodes", "G_nodes", "alpha_sec")
+	
+	def __init__(self, sim_params: LumpedElementParams, log:plf.LogPile=None):
+		super().__init__(self, log=log)
 		
 		self.sim_params = sim_params
 		
@@ -293,11 +318,12 @@ class LumpedElementSim:
 		self.sim_results = LumpedElementResult(t=t, v_nodes=v_hist, i_L=i_hist)
 		return self.sim_results
 
-class FiniteDiffSim:
+class FiniteDiffSim(NLTSimulator):
 	
-	def __init__(self, sim_params: FiniteDiffParams):
-		
-		self.sim_results = None
+	__state_fields__ = ("dx", "Nt", "C_nodes", "L0_half", "G_nodes", "alpha_half")
+	
+	def __init__(self, sim_params: FiniteDiffParams, log:plf.LogPile=None):
+		super().__init__(log=log)
 		
 		self.sim_params = sim_params
 		
