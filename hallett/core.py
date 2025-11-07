@@ -1,5 +1,15 @@
 import numpy as np
 
+def loss_to_conductance(C:float, R:float, L:float, loss_dB_per_m):
+	''' Converts loss per meter to conductance (approx).
+	'''
+	
+	Z0 = np.sqrt(L/C)
+	
+	alpha = dB_to_Np(loss_dB_per_m) # Np/m
+	
+	return (alpha - R/2/Z0)*2/Z0 # Equation from 2.85a in Pozar 4e, rearranged.
+
 def lin_to_dB(x_lin:float, use10:bool=False) -> float:
 	''' Converts a linear parameter to decibels. Will raise a warning if
 	negative numbers are provided.
