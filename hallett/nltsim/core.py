@@ -2,6 +2,8 @@ from dataclasses import dataclass
 import numpy as np
 from typing import Callable, List, Literal, Tuple, Optional
 from stardust.serializer import *
+from stardust.io import hdf_to_dict, dict_to_hdf, dict_summary
+import uuid
 
 import pylogfile.base as plf
 
@@ -29,9 +31,12 @@ def _newton_i_update(i0: np.ndarray, s: np.ndarray, L0: np.ndarray, alpha: np.nd
 		dF = 1.0 - s * dinvLd_di
 		step = F / (dF + 1e-300)
 		i_new = i - step
+		
 		if np.max(np.abs(step)) < tol:
 			return i_new
+		
 		i = i_new
+	
 	return i
 
 class SimulationResult(Serializable):
@@ -205,7 +210,9 @@ def _sample_regions_on_grid(regions: List, grid: np.ndarray, field: str) -> np.n
 class NLTSimulator(Serializable):
 	''' Parent class for all simulators '''
 	
-	__state_fields__ = ("log", "sim_results", "sim_params", "simulation_name", "simulation_notes")
+	__state_fields__ = ("sim_results", "sim_params", "simulation_name", "simulation_notes", "id")
+	
+	# __state_fields__ = ("log", "sim_results", "sim_params", "simulation_name", "simulation_notes", "id")
 	
 	def __init__(self, log:plf.LogPile=None):
 		super().__init__()
@@ -220,9 +227,80 @@ class NLTSimulator(Serializable):
 		
 		self.simulation_name = ""
 		self.simulation_notes = ""
+		
+		self.id = str(uuid.uuid4())
 	
 	def run(self):
 		pass
+
+class SimulationResultGroup(Serializable):
+	
+	__state_fields__ = ("simulations", "aux_results", "next_sim_id", "next_res_id")
+	
+	def __init__(self):
+		super().__init__()
+		
+		self.next_sim_id = 0
+		self.simulations = {} # Dictionary not list, to play nicely with hdf_to_dict
+		
+		self.next_res_id = 0
+		self.aux_results = {} # Dictionary not list, to play nicely with hdf_to_dict
+	
+	def print_summary(self):
+		
+		print(f"Simulations:")
+		for k, sim in self.simulations.items():
+			print(f"\t{sim.id}")
+		
+		print(f"Aux Results:")
+		for k, res in self.aux_results.items():
+			print(f"\t{res}")
+	
+	def add_simulation(self, sim:NLTSimulator):
+		
+		# TODO: Make sure simulation is not a duplicate
+		self.simulations[f'Sim{self.next_sim_id}'] = sim
+		self.next_sim_id += 1
+	
+	def add_result(self, result:Serializable):
+		
+		# TODO: Make sure simulation is not a duplicate
+		self.aux_results[f'Res{self.next_res_id}'] = result
+		self.next_res_id += 1
+	
+	def save(self, filename:str):
+		
+		# Generate dictionary
+		out_dict = to_serial_dict(self)
+		dict_summary(out_dict)
+		
+		# print(f"Simulations:")
+		# save_stuff = True
+		# for idx, sd in enumerate(out_dict['state']['state_data']['simulations']):
+		# 	print(f"idx = {idx}:")
+		# 	dict_summary(sd)
+		# 	if save_stuff:
+		# 		dict_to_hdf(sd, f"sd{idx}.hdf")
+		# 		# save_stuff = False
+		# 
+		# save_stuff = True
+		# print(f"Results:")
+		# for sd in out_dict['state']['state_data']['aux_results']:
+		# 	dict_summary(sd)
+		# 	if save_stuff:
+		# 		dict_to_hdf(sd, "sdresult.hdf")
+		# 		save_stuff = False
+		
+		# Save data
+		return dict_to_hdf(out_dict, filename, show_detail=True)
+	
+	def load(self, filename:str):
+		
+		# Load file
+		in_dict = hdf_to_dict(filename)
+		
+		# Restore state from dictioanry
+		self.deserialize(in_dict['state'])
 
 class LumpedElementSim(NLTSimulator):
 	''' Simulator for L-C ladder based non-linear transmission line. '''

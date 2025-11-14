@@ -3,6 +3,8 @@ import numpy as np
 from typing import Literal, Tuple, Optional
 import matplotlib.pyplot as plt
 
+from stardust.serializer import Serializable
+
 from hallett.nltsim.core import FiniteDiffResult
 from hallett.core import W_to_dBm
 
@@ -253,20 +255,43 @@ def tone_power_from_psd(freqs: np.ndarray, psd: np.ndarray, f_target: float, bw_
 	return P
 
 @dataclass
-class HarmonicPowerResult:
-	x_parameter: str = field(default_factory=lambda: "")
-	x_values: list = field(default_factory=list)
-	f0: list = field(default_factory=list)
-	h2: list = field(default_factory=list)
-	h3: list = field(default_factory=list)
-	h4: list = field(default_factory=list)
-	h5: list = field(default_factory=list)
-	h6: list = field(default_factory=list)
-	h7: list = field(default_factory=list)
-	h8: list = field(default_factory=list)
+class HarmonicPowerResult(Serializable):
+	
+	__state_fields__ = ("x_parameter", "x_values", "f0", "h2", "h3", "h4", "h5", "h6", "h7", "h8", "sim_ids" )
+	
+	def __init__(self, x_parameter:str="", x_values:list=[]):
+		super().__init__()
+		
+		self.x_parameter = x_parameter
+		self.x_values = x_values
+		
+		self.f0 = []
+		self.h2 = []
+		self.h3 = []
+		self.h4 = []
+		self.h5 = []
+		self.h6 = []
+		self.h7 = []
+		self.h8 = []
+		
+		self.sim_ids = []
+	 
+	def append_point(self, harmonics:list, x_value:float=None, sim_id:str=None):
+		''' Accepts a list of harmonic powers, and appends them to the lists, also
+		appending the specified x-value.'''
+		
+		if x_value is not None:
+			self.x_values.append(x_value)
+		
+		if sim_id is not None:
+			self.sim_ids.append(sim_id)
+		
+		for idx, val in enumerate(harmonics):
+			self.append_harmonic(idx+1, val)
 	
 	def append_harmonic(self, harm_idx:int, value:float):
-		''' Appends the specified value to the specified harmonic list.
+		''' Appends the specified value to the specified harmonic list. Adding a 
+		single data point to a specific harmonic.
 		'''
 		
 		if harm_idx == 1:
@@ -289,7 +314,7 @@ class HarmonicPowerResult:
 def load_harmonics_probe(result_obj, f0:float, tail:float, bin_bw_Hz:float, num_harmonics:int=3, RL:float=50, x_parameter:str="", x_values:list=[]):
 	'''
 	Calculates the power at a specified number of harmonics at the system load
-	from a result object.
+	from a result object. Returns a list of the harmonic powers.
 	
 	Args:
 		result_obj: Simulation result object to use.
@@ -297,9 +322,6 @@ def load_harmonics_probe(result_obj, f0:float, tail:float, bin_bw_Hz:float, num_
 			analyze. This allows you to skip the beginning of the sequence when
 			the system might not be in steady state.
 	'''
-	
-	# Create 
-	hp_obj = HarmonicPowerResult(x_parameter=x_parameter, x_values=x_values)
 	
 	# Get v and t from reulst object
 	if isinstance(result_obj, FiniteDiffResult):
@@ -330,11 +352,9 @@ def load_harmonics_probe(result_obj, f0:float, tail:float, bin_bw_Hz:float, num_
 		# Build up output list
 		output_elements.append(harm_power_dBm)
 		
-		# Add to HP object if present
-		if hp_obj is not None:
-			hp_obj.append_harmonic(i, harm_power_dBm)	
-	
-	
+		# # Add to HP object if present
+		# if hp_obj is not None:
+		# 	hp_obj.append_harmonic(i, harm_power_dBm)	
 	
 	# print(f"Vdc={vb:.3f} m  ->  P1={P1_dBm:.2f} dBm,  P2={P2_dBm:.2f} dBm,  P3={P3_dBm:.2f} dBm")
 	return output_elements
