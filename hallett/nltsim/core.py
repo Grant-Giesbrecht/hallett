@@ -268,31 +268,15 @@ class SimulationResultGroup(Serializable):
 		self.aux_results[f'Res{self.next_res_id}'] = result
 		self.next_res_id += 1
 	
-	def save(self, filename:str):
+	def save(self, filename:str, show_summary:bool=False):
 		
 		# Generate dictionary
 		out_dict = to_serial_dict(self)
-		dict_summary(out_dict)
-		
-		# print(f"Simulations:")
-		# save_stuff = True
-		# for idx, sd in enumerate(out_dict['state']['state_data']['simulations']):
-		# 	print(f"idx = {idx}:")
-		# 	dict_summary(sd)
-		# 	if save_stuff:
-		# 		dict_to_hdf(sd, f"sd{idx}.hdf")
-		# 		# save_stuff = False
-		# 
-		# save_stuff = True
-		# print(f"Results:")
-		# for sd in out_dict['state']['state_data']['aux_results']:
-		# 	dict_summary(sd)
-		# 	if save_stuff:
-		# 		dict_to_hdf(sd, "sdresult.hdf")
-		# 		save_stuff = False
+		if show_summary:
+			dict_summary(out_dict)
 		
 		# Save data
-		return dict_to_hdf(out_dict, filename, show_detail=True)
+		return dict_to_hdf(out_dict, filename)
 	
 	def load(self, filename:str):
 		
