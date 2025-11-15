@@ -250,11 +250,16 @@ class SimulationResultGroup(Serializable):
 		
 		print(f"Simulations:")
 		for k, sim in self.simulations.items():
-			print(f"\t{sim.id}")
+			print(f"\t{k}: {sim.id}")
 		
 		print(f"Aux Results:")
 		for k, res in self.aux_results.items():
-			print(f"\t{res}")
+			try:
+				print(f"\t{k}: {res.summarize()}")
+			except Exception as e:
+				print(f"Error occured! {e}")
+				dict_summary(res, verbose=1)
+				print(res)
 	
 	def add_simulation(self, sim:NLTSimulator):
 		
@@ -494,4 +499,10 @@ class FiniteDiffSim(NLTSimulator):
 		
 		return self.sim_results
 
-
+def load_sim_results(filename:str, show_warnings:bool=False) -> SimulationResultGroup:
+	''' Returns a SimResultGroup saved in a file.
+	'''
+	
+	in_data = hdf_to_dict(filename)
+	dict_summary(in_data, verbose=1)
+	return from_serial_dict(in_data, show_warnings=show_warnings)

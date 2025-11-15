@@ -311,6 +311,12 @@ class HarmonicPowerResult(Serializable):
 		elif harm_idx == 8:
 			self.h8.append(value)
 	
+	def summarize(self):
+		return f"HarmonicPowerResult: len={len(self.f0)}, x_param={self.x_parameter}"
+	
+	def __repr__(self):
+		return f"HarmonicPowerResult: len={len(self.f0)}, x_param={self.x_parameter}"
+	
 def load_harmonics_probe(result_obj, f0:float, tail:float, bin_bw_Hz:float, num_harmonics:int=3, RL:float=50, x_parameter:str="", x_values:list=[]):
 	'''
 	Calculates the power at a specified number of harmonics at the system load
