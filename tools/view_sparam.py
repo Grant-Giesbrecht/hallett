@@ -6,7 +6,7 @@ import argparse
 import mplcursors
 
 from pylogfile.base import mdprint
-from hallett.core import SParameters
+from hallett.linear import SParameters
 
 parser = argparse.ArgumentParser()
 parser.add_argument('filename')
