@@ -246,7 +246,7 @@ def tone_power_from_psd(freqs: np.ndarray, psd: np.ndarray, f_target: float, bw_
 	k_hi = min(len(freqs)-1, k0 + bw_bins)
 	
 	# Integrate with trapezoid method over region
-	v2 = np.trapz(psd[k_lo:k_hi+1], dx=df)  # integrate PSD over band -> V^2
+	v2 = np.trapezoid(psd[k_lo:k_hi+1], dx=df)  # integrate PSD over band -> V^2
 	
 	# Convert to power
 	P = v2 / RL                             # watts (since V_rms^2/R)
